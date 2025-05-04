@@ -1,67 +1,50 @@
--- Create the 1NF table
-CREATE TABLE OrderProducts_1NF (
+-- The table is already created in the assignment file with proper 1NF structure
+-- Here's the INSERT statement that properly puts the data in 1NF:
+
+CREATE TABLE ProductDetail (
     OrderID INT,
     CustomerName VARCHAR(100),
-    Product VARCHAR(100)
+    Products VARCHAR(100)
 );
 
--- Populate the 1NF table using a stored procedure to handle the string splitting
-DELIMITER //
-CREATE PROCEDURE NormalizeTo1NF()
-BEGIN
-    DECLARE done INT DEFAULT FALSE;
-    DECLARE o_id INT;
-    DECLARE c_name VARCHAR(100);
-    DECLARE p_list VARCHAR(255);
-    DECLARE cur CURSOR FOR SELECT OrderID, CustomerName, Products FROM ProductDetail;
-    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+INSERT INTO ProductDetail(OrderID, CustomerName, Products)
+VALUES
+    (101, 'John Doe', 'Laptop'),
+    (101, 'John Doe', 'Mouse'),
+    (102, 'Jane Smith', 'Tablet'),
+    (102, 'Jane Smith', 'Keyboard'),
+    (102, 'Jane Smith', 'Mouse'),
+    (103, 'Emily Clark', 'Phone');
     
-    OPEN cur;
-    
-    read_loop: LOOP
-        FETCH cur INTO o_id, c_name, p_list;
-        IF done THEN
-            LEAVE read_loop;
-        END IF;
-        
-        -- Handle products splitting
-        SET @products = p_list;
-        SET @pos = 1;
-        SET @delim = ',';
-        
-        WHILE LENGTH(@products) > 0 DO
-            SET @product = TRIM(SUBSTRING_INDEX(@products, @delim, 1));
-            SET @products = SUBSTRING(@products, LENGTH(@product) + 2);
-            
-            IF LENGTH(@products) = 0 THEN
-                SET @products = '';
-            END IF;
-            
-            INSERT INTO OrderProducts_1NF (OrderID, CustomerName, Product) 
-            VALUES (o_id, c_name, @product);
-        END WHILE;
-    END LOOP;
-    
-    CLOSE cur;
-END //
-DELIMITER ;
+-- Create Orders table with OrderID as primary key
+CREATE TABLE Orders (
+    OrderID INT PRIMARY KEY,
+    CustomerName VARCHAR(100)
+);
 
--- Execute the procedure
-CALL NormalizeTo1NF();
+-- Create Product table with composite primary key (OrderID, Product)
+-- and foreign key reference to Orders
+CREATE TABLE Product (
+    OrderID INT,
+    Product VARCHAR(100),
+    Quantity INT,
+    PRIMARY KEY (OrderID, Product),
+    FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+);
 
--- Verify the 1NF table
-SELECT * FROM OrderProducts_1NF;
--- Question 2
+-- Insert data into Orders table
+INSERT INTO Orders (OrderID, CustomerName)
+VALUES
+    (101, 'John Doe'),
+    (102, 'Jane Smith'),
+    (103, 'Emily Clark');
 
--- Step 1: Create Orders table (removes CustomerName from OrderDetails)
-CREATE TABLE Orders AS
-SELECT DISTINCT OrderID, CustomerName
-FROM OrderDetails;
-
--- Step 2: Create OrderItems table (keeps only what depends on full PK)
-CREATE TABLE OrderItems AS
-SELECT OrderID, Product, Quantity
-FROM OrderDetails;
-
--- Step 3: (Optional) Drop the original table if needed
--- DROP TABLE OrderDetails;    
+-- Insert data into Product table
+INSERT INTO Product (OrderID, Product, Quantity)
+VALUES
+    (101, 'Laptop', 2),
+    (101, 'Mouse', 1),
+    (102, 'Tablet', 3),
+    (102, 'Keyboard', 1),
+    (102, 'Mouse', 2),
+    (103, 'Phone', 1);    
